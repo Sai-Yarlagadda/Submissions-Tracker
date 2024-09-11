@@ -12,12 +12,21 @@ import requests
 from zipfile import ZipFile
 import fitz
 
+# Load GitHub credentials from environment variables
+GITHUB_USERNAME = 'Sai-Yarlagadda'#os.getenv('GITHUB_USERNAME', 'Sai-Yarlagadda')  # Default to your username if not set
+GITHUB_TOKEN = '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'#os.getenv('GITHUB_TOKEN', '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')  # Default to your token if not set
+
 def get_last_push_time(repo_url):
     repo_dir = tempfile.mkdtemp()
     repo = None
 
     try:
-        repo = git.Repo.clone_from(repo_url, repo_dir)
+        # Clone the repository using the provided username and token for authentication
+        repo = git.Repo.clone_from(
+            repo_url, 
+            repo_dir, 
+            env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': GITHUB_USERNAME, 'GIT_PASSWORD': GITHUB_TOKEN}
+        )
         tree = repo.tree()
         latest_commit_time = None
         for blob in tree:
@@ -73,39 +82,37 @@ def get_last_push(github_url, due_date, due_time):
         return last_push_time, "Error in processing URL"
 
 def load_excel_data():
-    # excel_data = pd.read_excel(excel_path)
-    id_to_name = {}
+    # Load student names and generate an id-to-name mapping
     names_list = [
-    "Abam, Brianna", "Ali, Jonathan", "Allen, Michael", "Alrayes, Ibrahim", "Arunmozhithevan, Aravindraj", 
-    "Atkuri, Venkata", "Baldonado, Micah", "Barkley, Jesse", "Baron, William", "Bobde, Yash Bobde", 
-    "Botcha, Suraj", "Chavarkar, Bhargavee", "Chen, Chi-yeh", "Chen, Phyllis", "Chen, Ruike", 
-    "Chermak, Nick", "Dai, Ruiyang", "Desai, Aadesh", "Dhanwal, Akanksha", "Dughyala, Nimisha", 
-    "Durham, Virginia", "Fan, Yuxiang", "Gauchat, Peter", "Graves, Reid", "Guo, Justin", 
-    "Guo, Yutong", "He, Jonathan", "He, Kristy", "He, Lyuxing", "Huang, Lenka", 
-    "Hung, Ya-En", "Jain, Arav", "Jangabyl, Janbol", "Joshi, Anirudh", "Joshi, Rutvik", 
-    "Karthikeyakannan, Madhav", "Krishnan, Shawn", "Kulkarni, Eesha", "Kumar, Prajwal", "Lai, Cheng-kai", 
-    "Lei, Bohan", "Li, Yi", "Li, Yue", "Li, Yuxiao", "Lin, Cheng-De", 
-    "Liu, Jiayi", "Liu, Wei", "Long, Feiyang", "Luo, Yinyi", "Lyu, Naixin", 
-    "Madan Gopal, Anusha", "Mahavir Prasad, .", "Malreddy, Abhishek Reddy", "Mandyam, Rishi", "Manheimer, Hannah", 
-    "Modh, Jainam", "Molugu, Gaurav", "Mu, Rong", "Naito, Katsuhiko", "Nemala, Vaisnavi", 
-    "Ni, Yichen", "Pagaria, Shreya", "Pang, Yuyang", "Park, Jonathan", "Qin, Cheng", 
-    "Ramadasan, Manigandan", "Ren, Yifei", "Roberts, Jonathan", "Robinson, Myles", "Rosario, Jason", 
-    "Sakhale, Yash", "Samanta, Ritarka", "Sarac, Pelinsu", "Shandilya, Aryaman", "Sharma, Jayant", 
-    "Shen, Anthony", "Shen, Jiyun", "Singh, Rohan", "Smayra, Sami", "Song, Leiran", 
-    "Srinivasan, Samhitha", "Stack, Trevor", "Su, Yue", "Suresh, Saadhikha Shree", "Takham, Kitiyaporn", 
-    "Tan, Eric", "Tan, Rolian", "Tang, Jonathan", "Thammineni, Swaroop", "Vigano, Andrea", 
-    "Vijaywargi, Jeet", "Villavicencio Garduno, Nicole", "Wang, An", "Wang, Yifan", "Wicklund, Dani", 
-    "Wu, Eric", "Wu, Timothy", "Wu, Yunhuan", "Xu, Junyi", "Xu, Lixin", 
-    "Xu, Yuan", "Xu, Zach", "Yang, Jieling", "Yang, Mengchu", "Yao, Daren", 
-    "Yu, Helen", "Yu, Junpu", "Yu, Yue", "Yuan, Enze", "Yuan, Jinsong", 
-    "Zeng, Tong", "Zhang, Shibo", "Zhang, Zane", "Zhang, Zeyang", "Zhao, Eric", 
-    "Zhao, Tunan", "Zhou, Zhexian", "Zhuang, Shiao"
-]
+        "Abam, Brianna", "Ali, Jonathan", "Allen, Michael", "Alrayes, Ibrahim", "Arunmozhithevan, Aravindraj", 
+        "Atkuri, Venkata", "Baldonado, Micah", "Barkley, Jesse", "Baron, William", "Bobde, Yash Bobde", 
+        "Botcha, Suraj", "Chavarkar, Bhargavee", "Chen, Chi-yeh", "Chen, Phyllis", "Chen, Ruike", 
+        "Chermak, Nick", "Dai, Ruiyang", "Desai, Aadesh", "Dhanwal, Akanksha", "Dughyala, Nimisha", 
+        "Durham, Virginia", "Fan, Yuxiang", "Gauchat, Peter", "Graves, Reid", "Guo, Justin", 
+        "Guo, Yutong", "He, Jonathan", "He, Kristy", "He, Lyuxing", "Huang, Lenka", 
+        "Hung, Ya-En", "Jain, Arav", "Jangabyl, Janbol", "Joshi, Anirudh", "Joshi, Rutvik", 
+        "Karthikeyakannan, Madhav", "Krishnan, Shawn", "Kulkarni, Eesha", "Kumar, Prajwal", "Lai, Cheng-kai", 
+        "Lei, Bohan", "Li, Yi", "Li, Yue", "Li, Yuxiao", "Lin, Cheng-De", 
+        "Liu, Jiayi", "Liu, Wei", "Long, Feiyang", "Luo, Yinyi", "Lyu, Naixin", 
+        "Madan Gopal, Anusha", "Mahavir Prasad, .", "Malreddy, Abhishek Reddy", "Mandyam, Rishi", "Manheimer, Hannah", 
+        "Modh, Jainam", "Molugu, Gaurav", "Mu, Rong", "Naito, Katsuhiko", "Nemala, Vaisnavi", 
+        "Ni, Yichen", "Pagaria, Shreya", "Pang, Yuyang", "Park, Jonathan", "Qin, Cheng", 
+        "Ramadasan, Manigandan", "Ren, Yifei", "Roberts, Jonathan", "Robinson, Myles", "Rosario, Jason", 
+        "Sakhale, Yash", "Samanta, Ritarka", "Sarac, Pelinsu", "Shandilya, Aryaman", "Sharma, Jayant", 
+        "Shen, Anthony", "Shen, Jiyun", "Singh, Rohan", "Smayra, Sami", "Song, Leiran", 
+        "Srinivasan, Samhitha", "Stack, Trevor", "Su, Yue", "Suresh, Saadhikha Shree", "Takham, Kitiyaporn", 
+        "Tan, Eric", "Tan, Rolian", "Tang, Jonathan", "Thammineni, Swaroop", "Vigano, Andrea", 
+        "Vijaywargi, Jeet", "Villavicencio Garduno, Nicole", "Wang, An", "Wang, Yifan", "Wicklund, Dani", 
+        "Wu, Eric", "Wu, Timothy", "Wu, Yunhuan", "Xu, Junyi", "Xu, Lixin", 
+        "Xu, Yuan", "Xu, Zach", "Yang, Jieling", "Yang, Mengchu", "Yao, Daren", 
+        "Yu, Helen", "Yu, Junpu", "Yu, Yue", "Yuan, Enze", "Yuan, Jinsong", 
+        "Zeng, Tong", "Zhang, Shibo", "Zhang, Zane", "Zhang, Zeyang", "Zhao, Eric", 
+        "Zhao, Tunan", "Zhou, Zhexian", "Zhuang, Shiao"
+    ]
     id_to_name = {}
     for name in names_list:
         file_name = re.sub(r'[^a-zA-Z]', '', name).lower()
         id_to_name[file_name] = name
-
     return id_to_name
 
 def is_valid_url(url):
